@@ -1,0 +1,191 @@
+name: Fabriquer APK GeGe le S
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Installer Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Installer Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Creer GeGe le S
+        run: |
+          mkdir -p app/src/main/java/fr/gegeles/app
+          mkdir -p app/src/main/res/values
+
+          cat > settings.gradle <<'EOF'
+          pluginManagement {
+            repositories {
+              google()
+              mavenCentral()
+              gradlePluginPortal()
+            }
+          }
+          dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+            repositories {
+              google()
+              mavenCentral()
+            }
+          }
+          rootProject.name = "GeGeLeS"
+          include(":app")
+          EOF
+
+          cat > build.gradle <<'EOF'
+          plugins {
+            id 'com.android.application' version '8.5.2' apply false
+          }
+          EOF
+
+          cat > app/build.gradle <<'EOF'
+          plugins {
+            id 'com.android.application'
+          }
+
+          android {
+            namespace 'fr.gegeles.app'
+            compileSdk 35
+
+            defaultConfig {
+              applicationId "fr.gegeles.app"
+              minSdk 26
+              targetSdk 35
+              versionCode 1
+              versionName "0.1"
+            }
+          }
+          EOF
+
+          cat > app/src/main/res/values/strings.xml <<'EOF'
+          <resources>
+            <string name="app_name">GéGé le S</string>
+          </resources>
+          EOF
+
+          cat > app/src/main/res/values/styles.xml <<'EOF'
+          <resources>
+            <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+              <item name="android:fontFamily">sans</item>
+              <item name="android:statusBarColor">#18120e</item>
+              <item name="android:navigationBarColor">#18120e</item>
+            </style>
+          </resources>
+          EOF
+
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <application
+              android:theme="@style/AppTheme"
+              android:label="GéGé le S">
+
+              <activity
+                android:name=".MainActivity"
+                android:screenOrientation="portrait"
+                android:exported="true">
+
+                <intent-filter>
+                  <action android:name="android.intent.action.MAIN"/>
+                  <category android:name="android.intent.category.LAUNCHER"/>
+                </intent-filter>
+
+              </activity>
+            </application>
+          </manifest>
+          EOF
+
+          cat > app/src/main/java/fr/gegeles/app/MainActivity.java <<'EOF'
+          package fr.gegeles.app;
+
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.graphics.Color;
+          import android.view.Gravity;
+          import android.widget.*;
+
+          public class MainActivity extends Activity {
+
+            @Override
+            public void onCreate(Bundle b) {
+              super.onCreate(b);
+
+              LinearLayout box = new LinearLayout(this);
+              box.setOrientation(LinearLayout.VERTICAL);
+              box.setGravity(Gravity.CENTER_HORIZONTAL);
+              box.setPadding(40,80,40,40);
+              box.setBackgroundColor(Color.rgb(24,18,14));
+
+              TextView title = new TextView(this);
+              title.setText("🔧 GéGé le S");
+              title.setTextColor(Color.WHITE);
+              title.setTextSize(34);
+              title.setGravity(Gravity.CENTER);
+              box.addView(title);
+
+              TextView slogan = new TextView(this);
+              slogan.setText("\nTu sais pas ? Demande à GéGé.\n\nVas-y, demande.\n");
+              slogan.setTextColor(Color.rgb(232,189,103));
+              slogan.setTextSize(20);
+              slogan.setGravity(Gravity.CENTER);
+              box.addView(slogan);
+
+              EditText question = new EditText(this);
+              question.setHint("Ex : ce voyant orange, c'est quoi ?");
+              question.setHintTextColor(Color.LTGRAY);
+              question.setTextColor(Color.WHITE);
+              question.setTextSize(18);
+              question.setMinLines(3);
+              box.addView(question);
+
+              Button ask = new Button(this);
+              ask.setText("DEMANDER À GÉGÉ");
+              box.addView(ask);
+
+              TextView answer = new TextView(this);
+              answer.setText("\nVersion test Android.\nLe cerveau IA sera branché après ton premier test.");
+              answer.setTextColor(Color.WHITE);
+              answer.setTextSize(17);
+              box.addView(answer);
+
+              ask.setOnClickListener(v -> {
+                String q = question.getText().toString().trim();
+
+                if(q.isEmpty()) {
+                  answer.setText("\nDis-moi ce qu'il t'arrive 😄");
+                } else {
+                  answer.setText(
+                    "\n🔧 GéGé a bien reçu :\n\n« " + q +
+                    " »\n\nV1 de test : l'application fonctionne."
+                  );
+                }
+              });
+
+              setContentView(box);
+            }
+          }
+          EOF
+
+      - name: Compiler APK
+        run: gradle :app:assembleDebug --no-daemon
+
+      - name: Renommer APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk GeGe-le-S-V1.apk
+
+      - name: Rendre APK telechargeable
+        uses: actions/upload-artifact@v4
+        with:
+          name: GeGe-le-S-V1-APK
+          path: GeGe-le-S-V1.apk
